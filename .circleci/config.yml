@@ -1,12 +1,11 @@
 version: 2.1
 orbs:
-  go: gotest/tools@0.0.13
   aws-cli: circleci/aws-cli@1.3.2
 
 executors:
   golang:
     docker:
-      - image: circleci/golang:1.16.4
+      - image: circleci/golang:1.17.9
     resource_class: 2xlarge
   ubuntu:
     docker:
@@ -25,8 +24,9 @@ executors:
 commands:
   install-deps:
     steps:
-      - go/install-ssh
-      - go/install: {package: git}
+      - run: |
+          sudo apt update
+          sudo apt install python-is-python3
   prepare:
     parameters:
       linux:
@@ -109,9 +109,13 @@ jobs:
     executor: golang
     steps:
       - install-deps
-      - prepare
-      - go/mod-tidy-check
-
+          - prepare
+          - run: go mod tidy -v
+          - run:
+              name: Check git diff
+              command: |
+                git --no-pager diff go.mod go.sum
+                git --no-pager diff --quiet go.mod go.sum          git --no-pager diff --quiet go.mod go.sumiff --quiet go.mod go.sum
   build-all:
     executor: golang
     steps:
@@ -370,8 +374,8 @@ jobs:
       - run:
           name: Install go
           command: |
-            curl -O https://dl.google.com/go/go1.16.4.darwin-amd64.pkg && \
-            sudo installer -pkg go1.16.4.darwin-amd64.pkg -target /
+            curl -O https://dl.google.com/go/go1.17.9.darwin-amd64.pkg && \
+            sudo installer -pkg go1.17.9.darwin-amd64.pkg -target /
       - run:
           name: Install pkg-config
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install pkg-config
@@ -539,7 +543,7 @@ jobs:
       - run:
           name: Lint
           command: |
-            $HOME/.local/bin/golangci-lint run -v --timeout 2m \
+          golangci-lint run -v --timeout 2m \
               --concurrency << parameters.concurrency >> << parameters.args >>
   lint-all:
     <<: *lint
